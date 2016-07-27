@@ -1,0 +1,62 @@
+---
+jobs:
+- name: build-ship-it
+  serial: true
+  public: true
+  plan:
+  - aggregate:
+    - get: golang-alpine-docker-image
+      trigger: true
+      params: {save: true}
+    - get: alpine-docker-cfcli-golang
+      trigger: true
+  - put: version
+    params: 
+      bump: minor
+      annotate: version/number
+  - put: alpine-cfcli-golang-image
+    params:
+      build: alpine-docker-cfcli-golang/
+      tag: version/number
+      tag_as_latest: true
+      load_base: golang-alpine-docker-image
+  - put: alpine-docker-cfcli-golang 
+    params: 
+      only_tag: true
+      repository: alpine-docker-cfcli-golang
+      tag: version/number
+
+      
+resources:
+- name: alpine-docker-cfcli-golang
+  type: git
+  source:
+    uri: git@github.com:shinji62/alpine-docker-cfcli-golang.git
+    branch: master
+    private_key: {{private-key-github-concourse}}
+
+- name: alpine-cfcli-golang-image
+  type: docker-image
+  source:
+    repository: getourneau/alpine-cfcli-golang
+    email: {{email-docker-hub}}
+    username: {{username-docker-hub}}
+    password: {{password-docker-hub}}
+
+- name: golang-alpine-docker-image
+  type: docker-image
+  source:
+    repository: golang
+    tag: 1.6-alpine
+
+- name: version
+  type: semver
+  source:
+    driver: git
+    uri: git@github.com:shinji62/version-concourse.git
+    branch: master
+    file: alpine-cfcli-golang/version
+    private_key: {{private-key-github-concourse}}
+    git_user: {{concourse-user-gitinfo}}
+
+
